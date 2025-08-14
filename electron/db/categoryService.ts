@@ -1,5 +1,5 @@
-import { pool } from '../config/database';
-import { Category } from '../types/pos';
+import { pool } from './database';
+import { Category } from '../../src/types/pos';
 import { v4 as uuidv4 } from 'uuid';
 
 export class CategoryService {

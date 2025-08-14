@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Product, Category, Customer, CartItem, Transaction } from './types/pos';
-import { CategoryService } from './services/categoryService';
-import { ProductService } from './services/productService';
-import { CustomerService } from './services/customerService';
-import { TransactionService } from './services/transactionService';
-import { initializeDatabase, testConnection } from './config/database';
-import { seedDatabase } from './data/seedData';
 import { ProductGrid } from './components/ProductGrid';
 import { Cart } from './components/Cart';
 import { SearchBar } from './components/SearchBar';
@@ -45,19 +39,23 @@ function App() {
     const initializeApp = async () => {
       setIsLoading(true);
       
-      // Test database connection
-      const connected = await testConnection();
-      setDbConnected(connected);
-      
-      if (connected) {
-        // Initialize database tables
-        await initializeDatabase();
+      if (window.electronAPI) {
+        // Test database connection
+        const connected = await window.electronAPI.db.testConnection();
+        setDbConnected(connected);
         
-        // Seed database with sample data
-        await seedDatabase();
-        
-        // Load initial data
-        await loadData();
+        if (connected) {
+          // Initialize database tables
+          await window.electronAPI.db.initializeDatabase();
+          
+          // Seed database with sample data
+          await window.electronAPI.db.seedDatabase();
+          
+          // Load initial data
+          await loadData();
+        }
+      } else {
+        setDbConnected(false);
       }
       
       setIsLoading(false);
@@ -68,15 +66,17 @@ function App() {
 
   const loadData = async () => {
     try {
-      const [categoriesData, productsData, customersData] = await Promise.all([
-        CategoryService.getAll(),
-        ProductService.getAll(),
-        CustomerService.getAll(),
-      ]);
-      
-      setCategories(categoriesData);
-      setProducts(productsData);
-      setCustomers(customersData);
+      if (window.electronAPI) {
+        const [categoriesData, productsData, customersData] = await Promise.all([
+          window.electronAPI.category.getAll(),
+          window.electronAPI.product.getAll(),
+          window.electronAPI.customer.getAll(),
+        ]);
+        
+        setCategories(categoriesData);
+        setProducts(productsData);
+        setCustomers(customersData);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -84,83 +84,101 @@ function App() {
 
   // Category CRUD operations
   const handleAddCategory = async (categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newCategory = await CategoryService.create(categoryData);
-    if (newCategory) {
-      setCategories(prev => [...prev, newCategory]);
+    if (window.electronAPI) {
+      const newCategory = await window.electronAPI.category.create(categoryData);
+      if (newCategory) {
+        setCategories(prev => [...prev, newCategory]);
+      }
     }
   };
 
   const handleUpdateCategory = async (id: string, categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const updatedCategory = await CategoryService.update(id, categoryData);
-    if (updatedCategory) {
-      setCategories(prev => prev.map(cat => 
-        cat.id === id ? updatedCategory : cat
-      ));
+    if (window.electronAPI) {
+      const updatedCategory = await window.electronAPI.category.update(id, categoryData);
+      if (updatedCategory) {
+        setCategories(prev => prev.map(cat => 
+          cat.id === id ? updatedCategory : cat
+        ));
+      }
     }
   };
 
   const handleDeleteCategory = async (id: string) => {
     if (confirm('Are you sure you want to delete this category?')) {
-      const success = await CategoryService.delete(id);
-      if (success) {
-        setCategories(prev => prev.filter(cat => cat.id !== id));
-        // Reload products to reflect category changes
-        const updatedProducts = await ProductService.getAll();
-        setProducts(updatedProducts);
+      if (window.electronAPI) {
+        const success = await window.electronAPI.category.delete(id);
+        if (success) {
+          setCategories(prev => prev.filter(cat => cat.id !== id));
+          // Reload products to reflect category changes
+          const updatedProducts = await window.electronAPI.product.getAll();
+          setProducts(updatedProducts);
+        }
       }
     }
   };
 
   // Product CRUD operations
   const handleAddProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newProduct = await ProductService.create(productData);
-    if (newProduct) {
-      setProducts(prev => [...prev, newProduct]);
+    if (window.electronAPI) {
+      const newProduct = await window.electronAPI.product.create(productData);
+      if (newProduct) {
+        setProducts(prev => [...prev, newProduct]);
+      }
     }
   };
 
   const handleUpdateProduct = async (id: string, productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const updatedProduct = await ProductService.update(id, productData);
-    if (updatedProduct) {
-      setProducts(prev => prev.map(product => 
-        product.id === id ? updatedProduct : product
-      ));
+    if (window.electronAPI) {
+      const updatedProduct = await window.electronAPI.product.update(id, productData);
+      if (updatedProduct) {
+        setProducts(prev => prev.map(product => 
+          product.id === id ? updatedProduct : product
+        ));
+      }
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
     if (confirm('Are you sure you want to delete this product?')) {
-      const success = await ProductService.delete(id);
-      if (success) {
-        setProducts(prev => prev.filter(product => product.id !== id));
-        // Remove from cart if present
-        setCartItems(prev => prev.filter(item => item.product.id !== id));
+      if (window.electronAPI) {
+        const success = await window.electronAPI.product.delete(id);
+        if (success) {
+          setProducts(prev => prev.filter(product => product.id !== id));
+          // Remove from cart if present
+          setCartItems(prev => prev.filter(item => item.product.id !== id));
+        }
       }
     }
   };
 
   // Customer CRUD operations
   const handleAddCustomer = async (customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newCustomer = await CustomerService.create(customerData);
-    if (newCustomer) {
-      setCustomers(prev => [...prev, newCustomer]);
+    if (window.electronAPI) {
+      const newCustomer = await window.electronAPI.customer.create(customerData);
+      if (newCustomer) {
+        setCustomers(prev => [...prev, newCustomer]);
+      }
     }
   };
 
   const handleUpdateCustomer = async (id: string, customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const updatedCustomer = await CustomerService.update(id, customerData);
-    if (updatedCustomer) {
-      setCustomers(prev => prev.map(customer => 
-        customer.id === id ? updatedCustomer : customer
-      ));
+    if (window.electronAPI) {
+      const updatedCustomer = await window.electronAPI.customer.update(id, customerData);
+      if (updatedCustomer) {
+        setCustomers(prev => prev.map(customer => 
+          customer.id === id ? updatedCustomer : customer
+        ));
+      }
     }
   };
 
   const handleDeleteCustomer = async (id: string) => {
     if (confirm('Are you sure you want to delete this customer?')) {
-      const success = await CustomerService.delete(id);
-      if (success) {
-        setCustomers(prev => prev.filter(customer => customer.id !== id));
+      if (window.electronAPI) {
+        const success = await window.electronAPI.customer.delete(id);
+        if (success) {
+          setCustomers(prev => prev.filter(customer => customer.id !== id));
+        }
       }
     }
   };
@@ -220,14 +238,16 @@ function App() {
     };
 
     // Save transaction to database
-    const savedTransaction = await TransactionService.create(transaction);
-    if (savedTransaction) {
-      setCurrentTransaction(savedTransaction);
-      // Reload products to update stock levels
-      const updatedProducts = await ProductService.getAll();
-      setProducts(updatedProducts);
-    } else {
-      setCurrentTransaction(transaction);
+    if (window.electronAPI) {
+      const savedTransaction = await window.electronAPI.transaction.create(transaction);
+      if (savedTransaction) {
+        setCurrentTransaction(savedTransaction);
+        // Reload products to update stock levels
+        const updatedProducts = await window.electronAPI.product.getAll();
+        setProducts(updatedProducts);
+      } else {
+        setCurrentTransaction(transaction);
+      }
     }
 
     setCartItems([]);

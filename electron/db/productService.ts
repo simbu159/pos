@@ -1,5 +1,5 @@
-import { pool } from '../config/database';
-import { Product } from '../types/pos';
+import { pool } from './database';
+import { Product } from '../../src/types/pos';
 import { v4 as uuidv4 } from 'uuid';
 
 export class ProductService {

@@ -1,6 +1,6 @@
-import { CategoryService } from '../services/categoryService';
-import { ProductService } from '../services/productService';
-import { CustomerService } from '../services/customerService';
+import { CategoryService } from './categoryService';
+import { ProductService } from './productService';
+import { CustomerService } from './customerService';
 
 export const seedDatabase = async () => {
   try {
