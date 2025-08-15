@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
+const { fileURLToPath } = require('url');
 const { testConnection, initializeDatabase } = require('./db/database');
 const { seedDatabase } = require('./db/seedData');
 const { CategoryService } = require('./db/categoryService');
@@ -13,6 +14,9 @@ require('dotenv').config();
 
 let mainWindow;
 
+// Fix for macOS path resolution
+const __dirname = path.dirname(fileURLToPath(import.meta.url || `file://${__filename}`));
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -23,22 +27,58 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      webSecurity: false, // Temporarily disable for development
+      allowRunningInsecureContent: true,
     },
     titleBarStyle: 'default',
     show: false,
+    icon: path.join(__dirname, '../public/icon.png'), // Add icon if available
   });
 
-  const startUrl = isDev 
-    ? 'http://localhost:5173' 
-    : `file://${path.join(__dirname, '../dist/index.html')}`;
+  // Better URL handling for Mac
+  let startUrl;
+  if (isDev) {
+    startUrl = 'http://localhost:5173';
+  } else {
+    startUrl = `file://${path.resolve(__dirname, '../dist/index.html')}`;
+  }
+  
+  console.log('Loading URL:', startUrl);
   
   mainWindow.loadURL(startUrl);
 
+  // Add error handling for load failures
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('Failed to load:', errorCode, errorDescription, validatedURL);
+    // Try loading a fallback URL
+    if (isDev) {
+      setTimeout(() => {
+        console.log('Retrying connection to dev server...');
+        mainWindow.loadURL('http://localhost:5173');
+      }, 2000);
+    }
+  });
+
+  // Add console message handling
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`Console [${level}]:`, message);
+  });
+
   mainWindow.once('ready-to-show', () => {
+    console.log('Window ready to show');
     mainWindow.show();
     if (isDev) {
       mainWindow.webContents.openDevTools();
     }
+  });
+
+  // Add additional event handlers for debugging
+  mainWindow.webContents.on('dom-ready', () => {
+    console.log('DOM ready');
+  });
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Page finished loading');
   });
 
   mainWindow.on('closed', () => {
@@ -84,7 +124,18 @@ function createWindow() {
   Menu.setApplicationMenu(menu);
 }
 
-app.whenReady().then(createWindow);
+// Better app initialization for Mac
+app.whenReady().then(() => {
+  console.log('App ready, creating window...');
+  createWindow();
+  
+  // macOS specific: re-create window when dock icon is clicked
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -92,9 +143,22 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+// Add app event logging
+app.on('ready', () => {
+  console.log('Electron app is ready');
+});
+
+app.on('before-quit', () => {
+  console.log('App is about to quit');
+});
+
+// Handle certificate errors (for development)
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  if (isDev) {
+    event.preventDefault();
+    callback(true);
+  } else {
+    callback(false);
   }
 });
 
