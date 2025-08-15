@@ -1,12 +1,11 @@
-import { pool } from './database';
-import { Category } from '../../src/types/pos';
-import { v4 as uuidv4 } from 'uuid';
+const { pool } = require('./database');
+const { v4: uuidv4 } = require('uuid');
 
-export class CategoryService {
-  static async getAll(): Promise<Category[]> {
+class CategoryService {
+  static async getAll() {
     try {
       const [rows] = await pool.execute('SELECT * FROM categories ORDER BY name');
-      return (rows as any[]).map(row => ({
+      return rows.map(row => ({
         id: row.id,
         name: row.name,
         description: row.description,
@@ -19,10 +18,10 @@ export class CategoryService {
     }
   }
 
-  static async getById(id: string): Promise<Category | null> {
+  static async getById(id) {
     try {
       const [rows] = await pool.execute('SELECT * FROM categories WHERE id = ?', [id]);
-      const row = (rows as any[])[0];
+      const row = rows[0];
       if (!row) return null;
       
       return {
@@ -38,14 +37,17 @@ export class CategoryService {
     }
   }
 
-  static async create(categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category | null> {
+  static async create(categoryData) {
     try {
       const id = uuidv4();
+      console.log('Creating category:', { id, ...categoryData });
+      
       await pool.execute(
         'INSERT INTO categories (id, name, description) VALUES (?, ?, ?)',
         [id, categoryData.name, categoryData.description || null]
       );
       
+      console.log('Category created successfully');
       return await this.getById(id);
     } catch (error) {
       console.error('Error creating category:', error);
@@ -53,13 +55,16 @@ export class CategoryService {
     }
   }
 
-  static async update(id: string, categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category | null> {
+  static async update(id, categoryData) {
     try {
+      console.log('Updating category:', id, categoryData);
+      
       await pool.execute(
         'UPDATE categories SET name = ?, description = ? WHERE id = ?',
         [categoryData.name, categoryData.description || null, id]
       );
       
+      console.log('Category updated successfully');
       return await this.getById(id);
     } catch (error) {
       console.error('Error updating category:', error);
@@ -67,13 +72,18 @@ export class CategoryService {
     }
   }
 
-  static async delete(id: string): Promise<boolean> {
+  static async delete(id) {
     try {
+      console.log('Deleting category:', id);
+      
       const [result] = await pool.execute('DELETE FROM categories WHERE id = ?', [id]);
-      return (result as any).affectedRows > 0;
+      console.log('Category deleted successfully');
+      return result.affectedRows > 0;
     } catch (error) {
       console.error('Error deleting category:', error);
       return false;
     }
   }
 }
+
+module.exports = { CategoryService };

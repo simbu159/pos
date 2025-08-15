@@ -1,9 +1,8 @@
-import { pool } from './database';
-import { Transaction } from '../../src/types/pos';
-import { v4 as uuidv4 } from 'uuid';
+const { pool } = require('./database');
+const { v4: uuidv4 } = require('uuid');
 
-export class TransactionService {
-  static async create(transaction: Transaction): Promise<Transaction | null> {
+class TransactionService {
+  static async create(transaction) {
     const connection = await pool.getConnection();
     
     try {
@@ -11,6 +10,8 @@ export class TransactionService {
       
       // Insert transaction
       const transactionId = uuidv4();
+      console.log('Creating transaction:', transactionId);
+      
       await connection.execute(
         'INSERT INTO transactions (id, customer_id, subtotal, tax, total, payment_method) VALUES (?, ?, ?, ?, ?, ?)',
         [
@@ -47,6 +48,7 @@ export class TransactionService {
       }
       
       await connection.commit();
+      console.log('Transaction created successfully');
       
       return await this.getById(transactionId);
     } catch (error) {
@@ -58,11 +60,11 @@ export class TransactionService {
     }
   }
 
-  static async getById(id: string): Promise<Transaction | null> {
+  static async getById(id) {
     try {
       // Get transaction
       const [transactionRows] = await pool.execute('SELECT * FROM transactions WHERE id = ?', [id]);
-      const transactionRow = (transactionRows as any[])[0];
+      const transactionRow = transactionRows[0];
       if (!transactionRow) return null;
       
       // Get transaction items
@@ -71,7 +73,7 @@ export class TransactionService {
         [id]
       );
       
-      const items = (itemRows as any[]).map(item => ({
+      const items = itemRows.map(item => ({
         product: {
           id: item.product_id,
           name: item.product_name,
@@ -100,7 +102,7 @@ export class TransactionService {
     }
   }
 
-  static async getAll(limit: number = 100): Promise<Transaction[]> {
+  static async getAll(limit = 100) {
     try {
       const [rows] = await pool.execute(
         'SELECT * FROM transactions ORDER BY timestamp DESC LIMIT ?',
@@ -108,7 +110,7 @@ export class TransactionService {
       );
       
       const transactions = [];
-      for (const row of rows as any[]) {
+      for (const row of rows) {
         const transaction = await this.getById(row.id);
         if (transaction) {
           transactions.push(transaction);
@@ -122,7 +124,7 @@ export class TransactionService {
     }
   }
 
-  static async getByDateRange(startDate: Date, endDate: Date): Promise<Transaction[]> {
+  static async getByDateRange(startDate, endDate) {
     try {
       const [rows] = await pool.execute(
         'SELECT * FROM transactions WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp DESC',
@@ -130,7 +132,7 @@ export class TransactionService {
       );
       
       const transactions = [];
-      for (const row of rows as any[]) {
+      for (const row of rows) {
         const transaction = await this.getById(row.id);
         if (transaction) {
           transactions.push(transaction);
@@ -144,3 +146,5 @@ export class TransactionService {
     }
   }
 }
+
+module.exports = { TransactionService };

@@ -8,6 +8,9 @@ const { CustomerService } = require('./db/customerService');
 const { TransactionService } = require('./db/transactionService');
 const isDev = process.env.NODE_ENV === 'development';
 
+// Load environment variables
+require('dotenv').config();
+
 let mainWindow;
 
 function createWindow() {

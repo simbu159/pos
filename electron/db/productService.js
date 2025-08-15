@@ -1,12 +1,11 @@
-import { pool } from './database';
-import { Product } from '../../src/types/pos';
-import { v4 as uuidv4 } from 'uuid';
+const { pool } = require('./database');
+const { v4: uuidv4 } = require('uuid');
 
-export class ProductService {
-  static async getAll(): Promise<Product[]> {
+class ProductService {
+  static async getAll() {
     try {
       const [rows] = await pool.execute('SELECT * FROM products ORDER BY name');
-      return (rows as any[]).map(row => ({
+      return rows.map(row => ({
         id: row.id,
         name: row.name,
         price: parseFloat(row.price),
@@ -24,10 +23,10 @@ export class ProductService {
     }
   }
 
-  static async getById(id: string): Promise<Product | null> {
+  static async getById(id) {
     try {
       const [rows] = await pool.execute('SELECT * FROM products WHERE id = ?', [id]);
-      const row = (rows as any[])[0];
+      const row = rows[0];
       if (!row) return null;
       
       return {
@@ -48,10 +47,10 @@ export class ProductService {
     }
   }
 
-  static async getByCategory(categoryId: string): Promise<Product[]> {
+  static async getByCategory(categoryId) {
     try {
       const [rows] = await pool.execute('SELECT * FROM products WHERE category_id = ? ORDER BY name', [categoryId]);
-      return (rows as any[]).map(row => ({
+      return rows.map(row => ({
         id: row.id,
         name: row.name,
         price: parseFloat(row.price),
@@ -69,9 +68,11 @@ export class ProductService {
     }
   }
 
-  static async create(productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product | null> {
+  static async create(productData) {
     try {
       const id = uuidv4();
+      console.log('Creating product:', { id, ...productData });
+      
       await pool.execute(
         'INSERT INTO products (id, name, price, category_id, stock, barcode, description, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
@@ -86,6 +87,7 @@ export class ProductService {
         ]
       );
       
+      console.log('Product created successfully');
       return await this.getById(id);
     } catch (error) {
       console.error('Error creating product:', error);
@@ -93,8 +95,10 @@ export class ProductService {
     }
   }
 
-  static async update(id: string, productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product | null> {
+  static async update(id, productData) {
     try {
+      console.log('Updating product:', id, productData);
+      
       await pool.execute(
         'UPDATE products SET name = ?, price = ?, category_id = ?, stock = ?, barcode = ?, description = ?, image = ? WHERE id = ?',
         [
@@ -109,6 +113,7 @@ export class ProductService {
         ]
       );
       
+      console.log('Product updated successfully');
       return await this.getById(id);
     } catch (error) {
       console.error('Error updating product:', error);
@@ -116,33 +121,36 @@ export class ProductService {
     }
   }
 
-  static async updateStock(id: string, stock: number): Promise<boolean> {
+  static async updateStock(id, stock) {
     try {
       const [result] = await pool.execute('UPDATE products SET stock = ? WHERE id = ?', [stock, id]);
-      return (result as any).affectedRows > 0;
+      return result.affectedRows > 0;
     } catch (error) {
       console.error('Error updating product stock:', error);
       return false;
     }
   }
 
-  static async delete(id: string): Promise<boolean> {
+  static async delete(id) {
     try {
+      console.log('Deleting product:', id);
+      
       const [result] = await pool.execute('DELETE FROM products WHERE id = ?', [id]);
-      return (result as any).affectedRows > 0;
+      console.log('Product deleted successfully');
+      return result.affectedRows > 0;
     } catch (error) {
       console.error('Error deleting product:', error);
       return false;
     }
   }
 
-  static async search(searchTerm: string): Promise<Product[]> {
+  static async search(searchTerm) {
     try {
       const [rows] = await pool.execute(
         'SELECT * FROM products WHERE name LIKE ? OR barcode LIKE ? ORDER BY name',
         [`%${searchTerm}%`, `%${searchTerm}%`]
       );
-      return (rows as any[]).map(row => ({
+      return rows.map(row => ({
         id: row.id,
         name: row.name,
         price: parseFloat(row.price),
@@ -160,3 +168,5 @@ export class ProductService {
     }
   }
 }
+
+module.exports = { ProductService };

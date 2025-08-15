@@ -1,14 +1,16 @@
-import { CategoryService } from './categoryService';
-import { ProductService } from './productService';
-import { CustomerService } from './customerService';
+const { CategoryService } = require('./categoryService');
+const { ProductService } = require('./productService');
+const { CustomerService } = require('./customerService');
 
-export const seedDatabase = async () => {
+const seedDatabase = async () => {
   try {
+    console.log('Starting database seeding...');
+    
     // Check if data already exists
     const existingCategories = await CategoryService.getAll();
     if (existingCategories.length > 0) {
-      console.log('Database already seeded');
-      return;
+      console.log('Database already seeded, skipping...');
+      return true;
     }
 
     console.log('Seeding database with sample data...');
@@ -24,11 +26,16 @@ export const seedDatabase = async () => {
 
     const createdCategories = [];
     for (const categoryData of categories) {
+      console.log('Creating category:', categoryData.name);
       const category = await CategoryService.create(categoryData);
       if (category) {
         createdCategories.push(category);
+        console.log('Category created:', category.name);
       }
     }
+
+    // Wait a bit to ensure categories are created
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Seed products
     const products = [
@@ -115,7 +122,11 @@ export const seedDatabase = async () => {
     ];
 
     for (const productData of products) {
-      await ProductService.create(productData);
+      console.log('Creating product:', productData.name);
+      const product = await ProductService.create(productData);
+      if (product) {
+        console.log('Product created:', product.name);
+      }
     }
 
     // Seed customers
@@ -140,11 +151,19 @@ export const seedDatabase = async () => {
     ];
 
     for (const customerData of customers) {
-      await CustomerService.create(customerData);
+      console.log('Creating customer:', customerData.name);
+      const customer = await CustomerService.create(customerData);
+      if (customer) {
+        console.log('Customer created:', customer.name);
+      }
     }
 
-    console.log('Database seeded successfully');
+    console.log('Database seeded successfully!');
+    return true;
   } catch (error) {
     console.error('Error seeding database:', error);
+    return false;
   }
 };
+
+module.exports = { seedDatabase };

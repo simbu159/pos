@@ -37,27 +37,41 @@ function App() {
   // Initialize database and load data
   useEffect(() => {
     const initializeApp = async () => {
+      console.log('Initializing POS application...');
       setIsLoading(true);
       
       if (window.electronAPI) {
+        console.log('Electron API available, testing database connection...');
         // Test database connection
         const connected = await window.electronAPI.db.testConnection();
+        console.log('Database connection result:', connected);
         setDbConnected(connected);
         
         if (connected) {
+          console.log('Database connected, initializing tables...');
           // Initialize database tables
-          await window.electronAPI.db.initializeDatabase();
+          const initialized = await window.electronAPI.db.initializeDatabase();
+          console.log('Database initialization result:', initialized);
           
-          // Seed database with sample data
-          await window.electronAPI.db.seedDatabase();
+          if (initialized) {
+            console.log('Seeding database with sample data...');
+            // Seed database with sample data
+            const seeded = await window.electronAPI.db.seedDatabase();
+            console.log('Database seeding result:', seeded);
+          }
           
           // Load initial data
+          console.log('Loading initial data...');
           await loadData();
+        } else {
+          console.log('Database connection failed, running in offline mode');
         }
       } else {
+        console.log('Electron API not available, running in web mode');
         setDbConnected(false);
       }
       
+      console.log('Application initialization complete');
       setIsLoading(false);
     };
     
@@ -66,12 +80,19 @@ function App() {
 
   const loadData = async () => {
     try {
+      console.log('Loading data from database...');
       if (window.electronAPI) {
         const [categoriesData, productsData, customersData] = await Promise.all([
           window.electronAPI.category.getAll(),
           window.electronAPI.product.getAll(),
           window.electronAPI.customer.getAll(),
         ]);
+        
+        console.log('Data loaded:', {
+          categories: categoriesData.length,
+          products: productsData.length,
+          customers: customersData.length
+        });
         
         setCategories(categoriesData);
         setProducts(productsData);

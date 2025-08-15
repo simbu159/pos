@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+const mysql = require('mysql2/promise');
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
@@ -12,10 +12,10 @@ const dbConfig = {
 };
 
 // Create connection pool
-export const pool = mysql.createPool(dbConfig);
+const pool = mysql.createPool(dbConfig);
 
 // Test database connection
-export const testConnection = async () => {
+const testConnection = async () => {
   try {
     const connection = await pool.getConnection();
     console.log('Database connected successfully');
@@ -28,8 +28,10 @@ export const testConnection = async () => {
 };
 
 // Initialize database tables
-export const initializeDatabase = async () => {
+const initializeDatabase = async () => {
   try {
+    console.log('Initializing database tables...');
+    
     // Create categories table
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS categories (
@@ -40,6 +42,7 @@ export const initializeDatabase = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+    console.log('Categories table created/verified');
 
     // Create products table
     await pool.execute(`
@@ -57,6 +60,7 @@ export const initializeDatabase = async () => {
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
       )
     `);
+    console.log('Products table created/verified');
 
     // Create customers table
     await pool.execute(`
@@ -70,6 +74,7 @@ export const initializeDatabase = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+    console.log('Customers table created/verified');
 
     // Create transactions table
     await pool.execute(`
@@ -84,6 +89,7 @@ export const initializeDatabase = async () => {
         FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
       )
     `);
+    console.log('Transactions table created/verified');
 
     // Create transaction_items table
     await pool.execute(`
@@ -99,6 +105,7 @@ export const initializeDatabase = async () => {
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
       )
     `);
+    console.log('Transaction items table created/verified');
 
     console.log('Database tables initialized successfully');
     return true;
@@ -106,4 +113,10 @@ export const initializeDatabase = async () => {
     console.error('Database initialization failed:', error);
     return false;
   }
+};
+
+module.exports = {
+  pool,
+  testConnection,
+  initializeDatabase,
 };

@@ -1,12 +1,11 @@
-import { pool } from './database';
-import { Customer } from '../../src/types/pos';
-import { v4 as uuidv4 } from 'uuid';
+const { pool } = require('./database');
+const { v4: uuidv4 } = require('uuid');
 
-export class CustomerService {
-  static async getAll(): Promise<Customer[]> {
+class CustomerService {
+  static async getAll() {
     try {
       const [rows] = await pool.execute('SELECT * FROM customers ORDER BY name');
-      return (rows as any[]).map(row => ({
+      return rows.map(row => ({
         id: row.id,
         name: row.name,
         email: row.email,
@@ -21,10 +20,10 @@ export class CustomerService {
     }
   }
 
-  static async getById(id: string): Promise<Customer | null> {
+  static async getById(id) {
     try {
       const [rows] = await pool.execute('SELECT * FROM customers WHERE id = ?', [id]);
-      const row = (rows as any[])[0];
+      const row = rows[0];
       if (!row) return null;
       
       return {
@@ -42,9 +41,11 @@ export class CustomerService {
     }
   }
 
-  static async create(customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Customer | null> {
+  static async create(customerData) {
     try {
       const id = uuidv4();
+      console.log('Creating customer:', { id, ...customerData });
+      
       await pool.execute(
         'INSERT INTO customers (id, name, email, phone, address) VALUES (?, ?, ?, ?, ?)',
         [
@@ -56,6 +57,7 @@ export class CustomerService {
         ]
       );
       
+      console.log('Customer created successfully');
       return await this.getById(id);
     } catch (error) {
       console.error('Error creating customer:', error);
@@ -63,8 +65,10 @@ export class CustomerService {
     }
   }
 
-  static async update(id: string, customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Customer | null> {
+  static async update(id, customerData) {
     try {
+      console.log('Updating customer:', id, customerData);
+      
       await pool.execute(
         'UPDATE customers SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?',
         [
@@ -76,6 +80,7 @@ export class CustomerService {
         ]
       );
       
+      console.log('Customer updated successfully');
       return await this.getById(id);
     } catch (error) {
       console.error('Error updating customer:', error);
@@ -83,23 +88,26 @@ export class CustomerService {
     }
   }
 
-  static async delete(id: string): Promise<boolean> {
+  static async delete(id) {
     try {
+      console.log('Deleting customer:', id);
+      
       const [result] = await pool.execute('DELETE FROM customers WHERE id = ?', [id]);
-      return (result as any).affectedRows > 0;
+      console.log('Customer deleted successfully');
+      return result.affectedRows > 0;
     } catch (error) {
       console.error('Error deleting customer:', error);
       return false;
     }
   }
 
-  static async search(searchTerm: string): Promise<Customer[]> {
+  static async search(searchTerm) {
     try {
       const [rows] = await pool.execute(
         'SELECT * FROM customers WHERE name LIKE ? OR email LIKE ? OR phone LIKE ? ORDER BY name',
         [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]
       );
-      return (rows as any[]).map(row => ({
+      return rows.map(row => ({
         id: row.id,
         name: row.name,
         email: row.email,
@@ -114,3 +122,5 @@ export class CustomerService {
     }
   }
 }
+
+module.exports = { CustomerService };
